@@ -2,6 +2,7 @@
 import os
 import sys
 import time
+import asyncio
 import json
 import ssl
 import urllib3
@@ -465,14 +466,24 @@ class QuotexAPI(object):
             },
             "reconnect": 5
         }
-        if platform.system() == "Linux":
-            payload["sslopt"]["ssl_version"] = ssl.PROTOCOL_TLS
+        # NOTE: previously this forced payload["sslopt"]["ssl_version"] = ssl.PROTOCOL_TLS
+        # on Linux. That option conflicts with the "context" key already set above
+        # (ssl_context, pinned to TLS 1.3) and on Streamlit Cloud's Linux/Python
+        # environment caused the handshake to hang silently instead of completing
+        # or erroring out. The SSLContext above already sets the TLS version, so
+        # no extra platform-specific override is needed.
         self.websocket_thread = threading.Thread(
             target=self.websocket.run_forever,
             kwargs=payload
         )
         self.websocket_thread.daemon = True
         self.websocket_thread.start()
+
+        # Safety timeout: without this, if the handshake never fires an error or
+        # success callback (e.g. blocked/filtered on a cloud host), this loop would
+        # spin forever and the UI would show "Connecting..." indefinitely.
+        start_time = time.time()
+        connect_timeout = 30
         while True:
             if global_value.check_websocket_if_error:
                 return False, global_value.websocket_error_reason
@@ -486,6 +497,10 @@ class QuotexAPI(object):
                 global_value.SSID = None
                 logger.debug("Websocket Token Rejected.")
                 return True, "Websocket Token Rejected."
+            elif time.time() - start_time > connect_timeout:
+                logger.debug("Websocket connection timed out.")
+                return False, f"Connection timed out after {connect_timeout}s (no response from server)."
+            await asyncio.sleep(0.1)
 
     def send_ssid(self, timeout=10):
         self.wss_message = None
