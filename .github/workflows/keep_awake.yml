@@ -1,0 +1,28 @@
+name: Keep Streamlit Awake
+
+on:
+  schedule:
+    # প্রতি ৩ দিন পর পর রাত ১২টায় (UTC) এই স্ক্রিপ্টটি অটোমেটিক রান হবে
+    - cron: '0 0 */3 * *'
+  workflow_dispatch: # এর মাধ্যমে আপনি চাইলে গিটহাব থেকে ম্যানুয়ালিও রান করতে পারবেন
+
+jobs:
+  refresh-app:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    - name: Install Playwright & Dependencies
+      run: |
+        pip install playwright
+        playwright install chromium
+
+    - name: Run Wakeup Script
+      run: python wake_app.py
