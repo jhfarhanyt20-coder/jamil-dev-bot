@@ -8,7 +8,7 @@ def main():
         page = browser.new_page()
         
         url = "https://quotextsignal.streamlit.app/" # <--- আপনার অ্যাপ লিংক এখানে দিন
-        print(# "Navigating to Streamlit app...")
+        print("Navigating to Streamlit app...") # <--- এখান থেকে # সরিয়ে ফেলা হয়েছে
         page.goto(url)
         time.sleep(5) # পেজ লোড হওয়ার জন্য ৫ সেকেন্ড অপেক্ষা
         
